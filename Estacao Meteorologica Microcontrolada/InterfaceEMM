@@ -189,4 +189,3 @@ axes(hObject);
 
 I = imread('dv.png');
 imagesc(I);
-
