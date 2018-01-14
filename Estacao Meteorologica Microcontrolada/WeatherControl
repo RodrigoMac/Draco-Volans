@@ -1,0 +1,146 @@
+
+  //                                           ***** ***** ***** ***** ***** Estação Meteorológica Microcontrolada ***** ***** ***** ***** ***** 
+  //
+  // Especificações: - Projetado para o Arduíno Nano
+  //                 - Este código faz uso dos seguintes sensores: BMP180 (pressão e temperatura), DHT11 (umidade e temperatura), KY-025 (interruptor magnético).
+  //                 - Também fornece liberdade para adicionar um módulo bluetooth para transmissão de dados e para utilizar outras versões dos sensores mecionados acima com as devidas adaptações.
+  //                 - Armazena os valores em txt, permitindo o processamento dos dados por meio de ferramentas como MATLAB, SCILAB e EXCEL.
+  
+  #include <DHT.h> // Biblioteca sensor de umidade e temperatura
+  #include <Adafruit_BMP085.h> // Biblioteca sensor pressão e temperatura 
+  #include <Adafruit_Sensor.h> 
+  #include "SoftwareSerial.h" 
+  #include <Wire.h>
+   
+  // Define a label, o pino e a versão do sensor DHT
+  DHT dht(7, DHT11);
+
+  // Label do sensor BMP180
+  Adafruit_BMP085 bmp180;
+
+  // Pinagem do módulo bluetooth (DESCOMENTAR SE UTILIZAR BLUETOOTH)
+  //SoftwareSerial bluetooth(1, 0); //TX, RX
+  
+  const int Anemometro =  2; // Pino do interruptor magnético
+  unsigned long timer; // Variavel para armazenar a contagem de tempo
+  unsigned long intervalo = 5000; // Intervalo de 5 segundos para verificação do anemômetro
+  const float Raio = 0.15; // Raio do anemômetro em metros
+  int Voltas = 0; // Variavel para contar o num. de giros do anemômetro
+  boolean Logica; // Variavel de controle (Debounce)
+  float Velocidade = 0;
+  boolean firstCycle = true; // Marca o primeiro ciclo do processo
+
+  // Resultados filtrados (Kalman)
+  float U;
+  float T;
+  float P;
+  float V;
+   
+  void setup(){
+    Serial.begin(9600);
+
+    // Anemometro como sinal entrada
+    pinMode(Anemometro, INPUT); 
+
+    // Parear velocidade do bluetooth (DESCOMENTAR SE UTILIZAR BLUETOOTH)
+    //bluetooth.begin(9600);
+
+    // Inicializa o sensor BMP180
+    bmp180.begin();
+    
+    // Inicializa o DHT22
+    dht.begin();
+    
+    // Inicia o timer
+    timer = millis(); 
+  }
+ 
+  void loop(){
+
+    while(1){
+  
+      // Atualiza o timer
+      timer = millis();
+  
+      // Função para contar voltar no anemômetro durante 5 segundos
+      while((millis() - timer) < intervalo){ 
+  
+        // Contagem de voltas no anemômetro. O while evita que a mesma volta seja contabilizada múltiplas vezes.
+        while(digitalRead(Anemometro) == HIGH){
+          Logica = true;
+        }
+        
+        if (Logica == true){
+          Voltas++;
+          Logica = false;
+        }
+      }
+  
+      // Velocidade = (Voltas*Perimetro)/intervalo
+      Velocidade = (Voltas*2*3.14*Raio)/5;
+
+      // Leitura temperatura, umidade e pressao
+      float Umidade = dht.readHumidity(); // %
+      float Temperatura = (dht.readTemperature() + bmp180.readTemperature())/2; // ºC .Utiliza ambos sensores para uma leitura mais precisa
+      float Pressao = bmp180.readPressure(); // hPa
+
+      // Inicializa o filtro para o primeiro ciclo
+      if(firstCycle){
+
+        U = Umidade;
+        T = Temperatura;
+        P = Pressao;
+        V = Velocidade;
+        firstCycle = false;
+      
+      }
+      
+      // Filtro Kalman
+      else{
+        
+        U = 0.9*U + 0.1*Umidade;
+        T = 0.9*T + 0.1*Temperatura;
+        P = 0.9*P + 0.1*Pressao;
+        V = 0.9*V + 0.1*Velocidade;
+      
+      }
+      
+      //Reseta o contador
+      Voltas = 0;
+  
+      //Atualização de valores em txt (DESCOMENTAR SE USAR BLUETOOTH)
+      /*
+      bluetooth.print(P);  //Pressão hPa
+      bluetooth.print(" ");
+      bluetooth.print(T); //Temp ºC
+      bluetooth.print(" ");
+      bluetooth.print(U); //Umidade %
+      bluetooth.print(" ");
+      bluetooth.println(V); //Vel. vento km/h
+      */
+  
+      //Atualização de valores em txt (DESCOMENTAR SE USAR USB)
+      /*
+      Serial.print("#S|LOG|[");
+      Serial.print(P);  // Pressão hPa
+      Serial.print(" ");
+      Serial.print(T); // Temp ºC
+      Serial.print(" ");
+      Serial.print(U); // Umidade %
+      Serial.print(" ");
+      Serial.println(V); //Vel. vento km/h
+      Serial.println("]#");
+      */
+
+      Serial.print(P);  // Pressão hPa
+      Serial.print(" ");
+      Serial.print(T); // Temp ºC
+      Serial.print(" ");
+      Serial.print(U); // Umidade %
+      Serial.print(" ");
+      Serial.println(V); //Vel. vento km/h
+      
+      // Aguarda 5 segundos para efetuar nova leitura
+      //delay(5000);
+    }
+  }
