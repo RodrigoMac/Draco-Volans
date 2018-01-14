@@ -1,0 +1,192 @@
+function varargout = InterfaceEMM(varargin)
+% INTERFACEEMM MATLAB code for InterfaceEMM.fig
+%      INTERFACEEMM, by itself, creates a new INTERFACEEMM or raises the existing
+%      singleton*.
+%
+%      H = INTERFACEEMM returns the handle to a new INTERFACEEMM or the handle to
+%      the existing singleton*.
+%
+%      INTERFACEEMM('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in INTERFACEEMM.M with the given input arguments.
+%
+%      INTERFACEEMM('Property','Value',...) creates a new INTERFACEEMM or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before InterfaceEMM_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to InterfaceEMM_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+
+% Edit the above text to modify the response to help InterfaceEMM
+
+% Last Modified by GUIDE v2.5 14-Jan-2018 20:30:02
+
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @InterfaceEMM_OpeningFcn, ...
+                   'gui_OutputFcn',  @InterfaceEMM_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+% End initialization code - DO NOT EDIT
+
+
+% --- Executes just before InterfaceEMM is made visible.
+function InterfaceEMM_OpeningFcn(hObject, eventdata, handles, varargin)
+% This function has no output args, see OutputFcn.
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% varargin   command line arguments to InterfaceEMM (see VARARGIN)
+
+% Choose default command line output for InterfaceEMM
+handles.output = hObject;
+
+% Update handles structure
+guidata(hObject, handles);
+
+% UIWAIT makes InterfaceEMM wait for user response (see UIRESUME)
+% uiwait(handles.figure1);
+
+
+% --- Outputs from this function are returned to the command line.
+function varargout = InterfaceEMM_OutputFcn(hObject, eventdata, handles) 
+% varargout  cell array for returning output args (see VARARGOUT);
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Get default command line output from handles structure
+varargout{1} = handles.output;
+
+
+
+%%%%% Funções e gráficos dos parametros %%%%%
+
+% Abre o arquivo com os dados (leitura)
+WD = fopen('WeatherData.txt', 'r');
+
+% Cria texto de cabeçalho
+intro = text(0.5,0.5,'Estação Meteorológica DV-1');
+intro.FontSize = 30;
+intro.Position = [237 20,5];
+
+% Contador de ciclos (utilizado no vetor 'time')
+counter = 1; 
+
+% Aguarda 5 segundos até a inicialização
+pause(5);
+
+while 1
+    
+    % Define o eixo do tempo em espaços de 5 segundos (atualiza com os ciclos)
+     if counter < 13
+    
+    time = linspace(5, counter*5, counter);
+    
+    else % Mostra os valores lidos no último minuto
+        
+         time = linspace(((floor(counter/12)-1)*10 + mod(counter,12))*5, counter*5, 12)
+        
+    end
+        
+    % Lê as colunas referentes a cada parametro
+    CurrP = dlmread('WeatherData.txt', ' ', [2 0 (counter+1) 0]);
+    CurrT = dlmread('WeatherData.txt', ' ', [2 1 (counter+1) 1]);
+    CurrH = dlmread('WeatherData.txt', ' ', [2 2 (counter+1) 2]);
+    CurrWS = dlmread('WeatherData.txt', ' ', [2 3 (counter+1) 3]);
+    
+    % Armazena os valores obtidos em variáveis   
+    P = CurrP(1:counter, 1);
+    T = CurrT(1:counter, 1);
+    H = CurrH(1:counter, 1);
+    WS = CurrWS(1:counter, 1);
+        
+    if counter > 12   % Mostra os valores lidos no último minuto
+        
+        P = P(((floor(counter/12) - 1)*10 + mod(counter,11)):counter, 1);
+        T = T(((floor(counter/12) - 1)*10 + mod(counter,11)):counter, 1);
+        H = H(((floor(counter/12) - 1)*10 + mod(counter,11)):counter, 1);
+        WS = WS(((floor(counter/12) - 1)*10 + mod(counter,11)):counter, 1);
+        
+    end
+    
+    % Transpõe os termos (transforma colunas em linhas)
+    P = P';
+    T = T';
+    H = H';
+    WS = WS';
+    
+    % Plota os gráficos no primeiro ciclo
+    if counter == 1
+        
+        axes(handles.axes1);
+        g1 = plot(time, WS, 'g');
+
+        axes(handles.axes2);
+        g2 = plot(time, H, 'b');
+
+        axes(handles.axes3);
+        g3 = plot(time, T, 'r');
+
+        axes(handles.axes4);
+        g4 = plot(time, P, 'm');
+     
+    % Atualiza os gráficos e textos nos ciclos subsequentes    
+    else
+        
+        set(g1, 'XData', time, 'YData', WS);    
+        set(g2, 'XData', time, 'YData', H);
+        set(g3, 'XData', time, 'YData', T);
+        set(g4, 'XData', time, 'YData', P);
+        
+        if counter < 13
+            
+        set(handles.text2, 'String', strcat('Velocidade do vento (m/s): ', num2str(WS(counter)))); 
+        set(handles.text3, 'String', strcat('Umidade (%): ', num2str(H(counter))));
+        set(handles.text4, 'String', strcat('Temperatura (ºC): ', num2str(T(counter))));
+        set(handles.text5, 'String', strcat('Pressão (hPa): ', num2str(P(counter))));
+        
+        else % Mostra os valores lidos no último minuto
+            
+            set(handles.text2, 'String', strcat('Velocidade do vento (m/s): ', num2str(WS(12)))); 
+            set(handles.text3, 'String', strcat('Umidade (%): ', num2str(H(12))));
+            set(handles.text4, 'String', strcat('Temperatura (ºC): ', num2str(T(12))));
+            set(handles.text5, 'String', strcat('Pressão (hPa): ', num2str(P(12))));
+        
+        end
+    end
+    
+    % Aguarda 5 segundos até a próxima atualização
+    pause(5.2);
+    
+    % Incrementa o contador de ciclo
+    counter = counter + 1;
+
+end
+
+% --- Executes during object creation, after setting all properties.
+function axes27_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes27 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: place code in OpeningFcn to populate axes27
+axes(hObject);
+
+I = imread('dv.png');
+imagesc(I);
+
